@@ -140,9 +140,7 @@ static void parseUknownHeader(uint8_t protocol);
 
 static void handleSession(void);             // void pram because g_session
 
-
-
-void startPackageCapture(void) {
+void * startPackageCapture(void*) {
     /* init the global var g_session */
     memset(g_session.dest_ip, '\0', IPV4_STRING_LEN);
     memset(g_session.src_ip, '\0', IPV4_STRING_LEN);

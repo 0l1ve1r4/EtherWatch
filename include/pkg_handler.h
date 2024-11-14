@@ -8,6 +8,6 @@
 #ifndef PKG_HANDLER_H
 #define PKG_HANDLER_H
 
-void startPackageCapture(void); 
+void * startPackageCapture(void * args); 
 
 #endif

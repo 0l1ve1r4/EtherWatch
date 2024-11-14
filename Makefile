@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Wpedantic -Wshadow -Wformat=2 -O3 -Iinclude
+CFLAGS = -Wno-unused-parameter -Wall -Wextra -Wpedantic -Wshadow -Wformat=2 -O3 -Iinclude
 LDFLAGS = -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 SRC_DIR = src
 OBJ_DIR = obj

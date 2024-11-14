@@ -29,6 +29,10 @@ A low-level toolkit written in C, for network analysis and forensic investigator
 
 ### Installing Dependencies
 
+```bash
+chmod +x ./libs.sh &* ./libs.sh
+```
+
 - **Raylib** (for GUI support): Install via package manager or [Raylib's official guide](https://github.com/raysan5/raylib).
 
 ## Building and Running
