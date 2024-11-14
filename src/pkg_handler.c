@@ -13,14 +13,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <unistd.h>
+#include <arpa/inet.h> // inet_ntoa
 #include <sys/socket.h>
 
-#include <arpa/inet.h> // inet_ntoa
-#include <unistd.h>
-#include <stdint.h>
-
-#include "../include/pkg_handler.h"
 #include "../include/debug.h"
+#include "../include/pkg_handler.h"
 
 //=============================================================================
 // DEFINES
@@ -31,7 +29,6 @@
 #define ETH_P_IP    0x0800          // IPv4 protocol
 #define ETH_ALEN    0X0006          // Ether address len (6 bytes for MAC)
 
-#define IPV4_STRING_LEN 16
 #define SOCKET_BUFFER_SIZE UINT16_MAX + 1
 
 //=============================================================================
@@ -113,20 +110,12 @@ struct udphdr {
     uint16_t check;          // Checksum
 };
 
-// Session to be saved in a database to future analysis
-typedef struct {
-    int32_t src_port;
-    int32_t dest_port;
-    char src_ip[IPV4_STRING_LEN];
-    char dest_ip[IPV4_STRING_LEN];
-    char protocol[INT8_MAX];
-} Session;
-
 //=============================================================================
 // GLOBAL VARS
 //=============================================================================
 
 static Session g_session; 
+static uint16_t g_numSessions;
 
 //=============================================================================
 // FUNCIONS
@@ -154,7 +143,7 @@ void * startPackageCapture(void*) {
         return;
     }
 
-    while (1) {
+    while (g_numSessions < 10) {
         socklen_t saddr_len = sizeof(saddr);
         int32_t data_size = recvfrom(sock, buffer, SOCKET_BUFFER_SIZE, 0,
             &saddr, &saddr_len);
@@ -221,6 +210,60 @@ static void parseUdpHeader(uint8_t * buffer) {
 
 }
 
+int8_t saveSession(const char *filename, const Session *session) {
+    FILE *file = fopen(filename, "ab");
+    if (!file) {
+        DEBUG_PRINT(RED_DEBUG, "ERROR SAVING FILE");
+        return -1;
+    }
+
+    fwrite(session, sizeof(Session), 1, file);
+    fclose(file);
+    return 0;
+}
+
+Session *loadSessions(const char *filename, size_t *session_count) {
+    FILE *file = fopen(filename, "rb");
+    if (!file){
+        DEBUG_PRINT(RED_DEBUG, "ERROR LOADING FILE");
+        return NULL;
+    }
+
+    // Determine file size and calculate the number of sessions
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    *session_count = file_size / sizeof(Session);
+    Session *sessions = (Session *)malloc(file_size);
+    if (!sessions) {
+        DEBUG_PRINT(RED_DEBUG, "ERROR LOADING MALLOC");
+        fclose(file);
+        return NULL;
+    }
+
+    fread(sessions, sizeof(Session), *session_count, file);
+    fclose(file);
+    return sessions;
+}
+
+size_t countSessions(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        DEBUG_PRINT(RED_DEBUG, "ERROR OPENING FILE");
+        return 0;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+
+    fclose(file);
+
+
+
+    return (size_t)(file_size / sizeof(Session));
+}
+
 static void handleSession(void) {
     DEBUG_PRINT(CYAN_DEBUG, "PACKAGE");
     printf( " ├── Source Ip: %s \n"
@@ -234,6 +277,11 @@ static void handleSession(void) {
             g_session.dest_port,
             g_session.protocol
     );
+    
+    if(saveSession(SESSION_SAVE_FILE, &g_session) == 0){
+        g_numSessions++;
+    }
+
 }
 
 static void parseUknownHeader(uint8_t protocol) {
